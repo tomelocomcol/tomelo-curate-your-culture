@@ -166,6 +166,33 @@ export type Database = {
           },
         ]
       }
+      stories: {
+        Row: {
+          author_id: string
+          body: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          image_url: string | null
+        }
+        Insert: {
+          author_id: string
+          body?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string | null
+        }
+        Update: {
+          author_id?: string
+          body?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string | null
+        }
+        Relationships: []
+      }
       user_books: {
         Row: {
           author: string | null

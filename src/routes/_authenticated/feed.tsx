@@ -5,6 +5,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { PostCard, type PostRow } from "@/components/PostCard";
+import { Stories } from "@/components/Stories";
 
 const FILTERS = [
   { key: "todos", label: "Todos" },
@@ -40,7 +41,10 @@ function FeedPage() {
 
   return (
     <AppShell showSettings>
+      <Stories currentUserId={user.id} />
+
       <nav className="flex gap-2 px-5 py-5 overflow-x-auto no-scrollbar">
+
         {FILTERS.map((f) => (
           <button
             key={f.key}
