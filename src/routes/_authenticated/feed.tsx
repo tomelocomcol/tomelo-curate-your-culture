@@ -41,7 +41,10 @@ function FeedPage() {
 
   return (
     <AppShell showSettings>
+      <Stories currentUserId={user.id} />
+
       <nav className="flex gap-2 px-5 py-5 overflow-x-auto no-scrollbar">
+
         {FILTERS.map((f) => (
           <button
             key={f.key}
