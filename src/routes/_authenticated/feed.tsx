@@ -5,6 +5,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { PostCard, type PostRow } from "@/components/PostCard";
+import { Stories } from "@/components/Stories";
 
 const FILTERS = [
   { key: "todos", label: "Todos" },
