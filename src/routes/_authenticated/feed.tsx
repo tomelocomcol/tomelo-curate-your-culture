@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { PostCard, type PostRow } from "@/components/PostCard";
 import { Stories } from "@/components/Stories";
+import { ProfileHeader } from "@/components/ProfileHeader";
 
 const FILTERS = [
   { key: "todos", label: "Todos" },
@@ -21,6 +22,19 @@ export const Route = createFileRoute("/_authenticated/feed")({
 function FeedPage() {
   const { user } = Route.useRouteContext();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("todos");
+
+  const myProfile = useQuery({
+    queryKey: ["profile", user.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const posts = useQuery({
     queryKey: ["feed", filter],
@@ -41,7 +55,8 @@ function FeedPage() {
 
   return (
     <AppShell showSettings>
-      <Stories currentUserId={user.id} />
+      <ProfileHeader userId={user.id} />
+      <Stories currentUserId={user.id} myAvatar={myProfile.data?.avatar_url} />
 
       <nav className="flex gap-2 px-5 py-5 overflow-x-auto no-scrollbar">
 

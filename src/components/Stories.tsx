@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, X, Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SmartImage } from "./SmartImage";
-import { uploadUserMedia, getSignedUrl } from "@/lib/storage";
+import { uploadUserMedia } from "@/lib/storage";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -23,7 +23,13 @@ type GroupedAuthor = {
   stories: StoryRow[];
 };
 
-export function Stories({ currentUserId }: { currentUserId: string }) {
+export function Stories({
+  currentUserId,
+  myAvatar,
+}: {
+  currentUserId: string;
+  myAvatar?: string | null;
+}) {
   const qc = useQueryClient();
   const [composerOpen, setComposerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
@@ -69,21 +75,46 @@ export function Stories({ currentUserId }: { currentUserId: string }) {
     <>
       <div className="px-5 pt-5 pb-3 border-b border-ink/5">
         <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-1 px-1">
-          <button
-            onClick={() => setComposerOpen(true)}
-            className="flex flex-col items-center gap-1.5 shrink-0 w-16"
-            aria-label="Nuevo estado"
-          >
-            <div className="relative size-16 rounded-full bg-parchment border-2 border-dashed border-ink/25 flex items-center justify-center text-ink/40 hover:border-clay hover:text-clay transition-colors">
-              <Plus className="h-5 w-5" strokeWidth={2} />
-            </div>
-            <span className="text-[10px] text-ink/60 truncate w-full text-center">
-              Tu estado
-            </span>
-          </button>
+          <div className="relative shrink-0 w-16">
+            <button
+              onClick={() => (myGroup ? setViewerIndex(grouped.indexOf(myGroup)) : setComposerOpen(true))}
+              className="flex flex-col items-center gap-1.5 w-16"
+              aria-label={myGroup ? "Ver tu estado" : "Nuevo estado"}
+            >
+              <div
+                className={`relative size-16 rounded-full ${myGroup ? "p-[2px] bg-gradient-to-br from-clay via-leather to-ink" : "border-2 border-dashed border-ink/25 bg-parchment"} flex items-center justify-center`}
+              >
+                <div className="size-full rounded-full bg-parchment p-[2px]">
+                  <div className="size-full rounded-full overflow-hidden bg-leather/15 flex items-center justify-center text-sm font-semibold text-leather">
+                    {myGroup?.stories.find((st) => st.image_url)?.image_url ? (
+                      <SmartImage
+                        path={myGroup.stories.find((st) => st.image_url)!.image_url}
+                        alt="tu estado"
+                        className="size-full object-cover"
+                      />
+                    ) : myAvatar ? (
+                      <SmartImage path={myAvatar} alt="tú" className="size-full object-cover" />
+                    ) : (
+                      <Plus className="h-5 w-5 text-ink/40" strokeWidth={2} />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] text-ink/60 truncate w-full text-center">
+                Tu estado
+              </span>
+            </button>
+            <button
+              onClick={() => setComposerOpen(true)}
+              aria-label="Nuevo estado"
+              className="absolute top-11 right-0 size-5 rounded-full bg-clay text-parchment grid place-items-center border-2 border-parchment"
+            >
+              <Plus className="h-3 w-3" strokeWidth={3} />
+            </button>
+          </div>
 
           {grouped.map((g, i) => {
-            const isMine = g.author_id === currentUserId;
+            if (g.author_id === currentUserId) return null;
             return (
               <button
                 key={g.author_id}
@@ -93,12 +124,16 @@ export function Stories({ currentUserId }: { currentUserId: string }) {
                 <div className="relative size-16 rounded-full p-[2px] bg-gradient-to-br from-clay via-leather to-ink">
                   <div className="size-full rounded-full bg-parchment p-[2px]">
                     <div className="size-full rounded-full bg-leather/15 flex items-center justify-center text-sm font-semibold text-leather overflow-hidden">
-                      {(g.author?.display_name ?? "?").slice(0, 1).toUpperCase()}
+                      {g.author?.avatar_url ? (
+                        <SmartImage path={g.author.avatar_url} alt="" className="size-full object-cover" />
+                      ) : (
+                        (g.author?.display_name ?? "?").slice(0, 1).toUpperCase()
+                      )}
                     </div>
                   </div>
                 </div>
                 <span className="text-[10px] text-ink/60 truncate w-full text-center">
-                  {isMine ? "Tú" : (g.author?.display_name ?? "—")}
+                  {g.author?.display_name ?? "—"}
                 </span>
               </button>
             );
@@ -164,7 +199,7 @@ function StoryComposer({
 
   return (
     <div className="fixed inset-0 z-50 bg-ink/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-parchment rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+      <div className="bg-parchment rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-ink/10">
           <h2 className="font-serif text-lg">Nuevo estado</h2>
           <button onClick={onClose} className="text-ink/50 hover:text-ink" aria-label="Cerrar">
@@ -172,7 +207,7 @@ function StoryComposer({
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -224,6 +259,9 @@ function StoryComposer({
             <p className="text-xs text-red-600">{(publish.error as Error).message}</p>
           )}
 
+        </div>
+
+        <div className="p-5 pt-3 border-t border-ink/10 bg-parchment">
           <button
             onClick={() => publish.mutate()}
             disabled={publish.isPending || (!body.trim() && !file)}

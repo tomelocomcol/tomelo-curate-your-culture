@@ -15,7 +15,7 @@ export function AddBookDialog({
 }: {
   userId: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (status: Status) => void;
 }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<OpenLibraryBook[]>([]);
@@ -26,6 +26,7 @@ export function AddBookDialog({
   const [status, setStatus] = useState<Status>("pendiente");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [pages, setPages] = useState("");
 
   async function runSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -57,10 +58,12 @@ export function AddBookDialog({
         author: selected.author,
         cover_url: selected.cover_url,
         status,
+        page_count: pages ? parseInt(pages, 10) : null,
+        current_page: status === "leido" && pages ? parseInt(pages, 10) : 0,
       });
       if (error) throw error;
       toast.success("Añadido a tu biblioteca");
-      onSaved();
+      onSaved(status);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     } finally {
@@ -87,10 +90,12 @@ export function AddBookDialog({
         author,
         cover_url,
         status,
+        page_count: pages ? parseInt(pages, 10) : null,
+        current_page: status === "leido" && pages ? parseInt(pages, 10) : 0,
       });
       if (error) throw error;
       toast.success("Añadido a tu biblioteca");
-      onSaved();
+      onSaved(status);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
     } finally {
@@ -124,6 +129,19 @@ export function AddBookDialog({
         </div>
 
         <StatusPicker status={status} setStatus={setStatus} />
+
+        <label className="mt-3 block">
+          <span className="text-[10px] uppercase tracking-widest text-ink/50 mb-1.5 block">
+            Total de páginas (para el progreso)
+          </span>
+          <input
+            value={pages}
+            onChange={(e) => setPages(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            placeholder="Ej. 320"
+            className="w-full rounded-lg border border-ink/15 bg-card px-3 py-2 text-sm"
+          />
+        </label>
 
         {!manual ? (
           <>
