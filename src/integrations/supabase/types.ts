@@ -106,6 +106,10 @@ export type Database = {
           bio: string | null
           created_at: string
           display_name: string
+          favorite_cafes: string | null
+          favorite_cinemas: string | null
+          favorite_film: string | null
+          favorite_genres: string[]
           id: string
           updated_at: string
           username: string
@@ -115,6 +119,10 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name: string
+          favorite_cafes?: string | null
+          favorite_cinemas?: string | null
+          favorite_film?: string | null
+          favorite_genres?: string[]
           id: string
           updated_at?: string
           username: string
@@ -124,6 +132,10 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name?: string
+          favorite_cafes?: string | null
+          favorite_cinemas?: string | null
+          favorite_film?: string | null
+          favorite_genres?: string[]
           id?: string
           updated_at?: string
           username?: string
@@ -198,10 +210,12 @@ export type Database = {
           author: string | null
           cover_url: string | null
           created_at: string
+          current_page: number
           finished_at: string | null
           id: string
           notes: string | null
           openlibrary_key: string | null
+          page_count: number | null
           started_at: string | null
           status: Database["public"]["Enums"]["book_status"]
           title: string
@@ -212,10 +226,12 @@ export type Database = {
           author?: string | null
           cover_url?: string | null
           created_at?: string
+          current_page?: number
           finished_at?: string | null
           id?: string
           notes?: string | null
           openlibrary_key?: string | null
+          page_count?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["book_status"]
           title: string
@@ -226,10 +242,12 @@ export type Database = {
           author?: string | null
           cover_url?: string | null
           created_at?: string
+          current_page?: number
           finished_at?: string | null
           id?: string
           notes?: string | null
           openlibrary_key?: string | null
+          page_count?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["book_status"]
           title?: string
