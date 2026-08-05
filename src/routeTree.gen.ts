@@ -19,6 +19,7 @@ import { Route as AuthenticatedNuevoRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedFeedRouteImport } from './routes/_authenticated/feed'
 import { Route as AuthenticatedCineRouteImport } from './routes/_authenticated/cine'
 import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
+import { Route as AuthenticatedAmigosRouteImport } from './routes/_authenticated/amigos'
 import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticated/ajustes'
 import { Route as AuthenticatedUUsernameRouteImport } from './routes/_authenticated/u.$username'
 
@@ -71,6 +72,11 @@ const AuthenticatedBibliotecaRoute = AuthenticatedBibliotecaRouteImport.update({
   path: '/biblioteca',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAmigosRoute = AuthenticatedAmigosRouteImport.update({
+  id: '/amigos',
+  path: '/amigos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAjustesRoute = AuthenticatedAjustesRouteImport.update({
   id: '/ajustes',
   path: '/ajustes',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
+  '/amigos': typeof AuthenticatedAmigosRoute
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/cine': typeof AuthenticatedCineRoute
   '/feed': typeof AuthenticatedFeedRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
+  '/amigos': typeof AuthenticatedAmigosRoute
   '/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/cine': typeof AuthenticatedCineRoute
   '/feed': typeof AuthenticatedFeedRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/ajustes': typeof AuthenticatedAjustesRoute
+  '/_authenticated/amigos': typeof AuthenticatedAmigosRoute
   '/_authenticated/biblioteca': typeof AuthenticatedBibliotecaRoute
   '/_authenticated/cine': typeof AuthenticatedCineRoute
   '/_authenticated/feed': typeof AuthenticatedFeedRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/ajustes'
+    | '/amigos'
     | '/biblioteca'
     | '/cine'
     | '/feed'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/ajustes'
+    | '/amigos'
     | '/biblioteca'
     | '/cine'
     | '/feed'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/_authenticated/ajustes'
+    | '/_authenticated/amigos'
     | '/_authenticated/biblioteca'
     | '/_authenticated/cine'
     | '/_authenticated/feed'
@@ -246,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBibliotecaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/amigos': {
+      id: '/_authenticated/amigos'
+      path: '/amigos'
+      fullPath: '/amigos'
+      preLoaderRoute: typeof AuthenticatedAmigosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ajustes': {
       id: '/_authenticated/ajustes'
       path: '/ajustes'
@@ -265,6 +284,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAjustesRoute: typeof AuthenticatedAjustesRoute
+  AuthenticatedAmigosRoute: typeof AuthenticatedAmigosRoute
   AuthenticatedBibliotecaRoute: typeof AuthenticatedBibliotecaRoute
   AuthenticatedCineRoute: typeof AuthenticatedCineRoute
   AuthenticatedFeedRoute: typeof AuthenticatedFeedRoute
@@ -275,6 +295,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAjustesRoute: AuthenticatedAjustesRoute,
+  AuthenticatedAmigosRoute: AuthenticatedAmigosRoute,
   AuthenticatedBibliotecaRoute: AuthenticatedBibliotecaRoute,
   AuthenticatedCineRoute: AuthenticatedCineRoute,
   AuthenticatedFeedRoute: AuthenticatedFeedRoute,
