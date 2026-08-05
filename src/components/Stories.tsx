@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
+import { Plus, X, Image as ImageIcon, Loader2, Trash2, MapPin, AtSign, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SmartImage } from "./SmartImage";
 import { uploadUserMedia } from "@/lib/storage";
@@ -12,6 +12,8 @@ type StoryRow = {
   author_id: string;
   body: string | null;
   image_url: string | null;
+  place: string | null;
+  tagged_people: string[] | null;
   created_at: string;
   expires_at: string;
   author: { username: string; display_name: string; avatar_url: string | null } | null;
@@ -22,6 +24,7 @@ type GroupedAuthor = {
   author: StoryRow["author"];
   stories: StoryRow[];
 };
+
 
 export function Stories({
   currentUserId,
