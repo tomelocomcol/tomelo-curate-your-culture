@@ -186,6 +186,10 @@ export type Database = {
           expires_at: string
           id: string
           image_url: string | null
+          place: string | null
+          place_lat: number | null
+          place_lng: number | null
+          tagged_people: string[]
         }
         Insert: {
           author_id: string
@@ -194,6 +198,10 @@ export type Database = {
           expires_at?: string
           id?: string
           image_url?: string | null
+          place?: string | null
+          place_lat?: number | null
+          place_lng?: number | null
+          tagged_people?: string[]
         }
         Update: {
           author_id?: string
@@ -202,8 +210,20 @@ export type Database = {
           expires_at?: string
           id?: string
           image_url?: string | null
+          place?: string | null
+          place_lat?: number | null
+          place_lng?: number | null
+          tagged_people?: string[]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stories_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_books: {
         Row: {

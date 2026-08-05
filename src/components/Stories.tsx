@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X, Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
+import { Plus, X, Image as ImageIcon, Loader2, Trash2, MapPin, AtSign, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SmartImage } from "./SmartImage";
 import { uploadUserMedia } from "@/lib/storage";
@@ -12,6 +12,8 @@ type StoryRow = {
   author_id: string;
   body: string | null;
   image_url: string | null;
+  place: string | null;
+  tagged_people: string[] | null;
   created_at: string;
   expires_at: string;
   author: { username: string; display_name: string; avatar_url: string | null } | null;
@@ -22,6 +24,7 @@ type GroupedAuthor = {
   author: StoryRow["author"];
   stories: StoryRow[];
 };
+
 
 export function Stories({
   currentUserId,
@@ -40,7 +43,7 @@ export function Stories({
       const { data, error } = await supabase
         .from("stories")
         .select(
-          "id, author_id, body, image_url, created_at, expires_at, author:profiles!stories_author_id_fkey(username, display_name, avatar_url)",
+          "id, author_id, body, image_url, place, tagged_people, created_at, expires_at, author:profiles!stories_author_id_fkey(username, display_name, avatar_url)",
         )
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: true });
@@ -167,6 +170,54 @@ export function Stories({
 
 /* -------------------- Composer -------------------- */
 
+type PlaceHit = { name: string; lat: number; lng: number };
+
+function usePlaceSearch(term: string) {
+  const [results, setResults] = useState<PlaceHit[]>([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    const q = term.trim();
+    if (q.length < 3) {
+      setResults([]);
+      return;
+    }
+    let alive = true;
+    setLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q=${encodeURIComponent(q)}`,
+          { headers: { Accept: "application/json" } },
+        );
+        const json = (await res.json()) as Array<{
+          display_name: string;
+          name?: string;
+          lat: string;
+          lon: string;
+        }>;
+        if (!alive) return;
+        setResults(
+          json.map((r) => ({
+            name: r.name && r.name.length > 0 ? `${r.name} · ${r.display_name.split(",").slice(1, 3).join(",").trim()}` : r.display_name,
+            lat: Number(r.lat),
+            lng: Number(r.lon),
+          })),
+        );
+      } catch {
+        if (alive) setResults([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }, 450);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+      setLoading(false);
+    };
+  }, [term]);
+  return { results, loading };
+}
+
 function StoryComposer({
   userId,
   onClose,
@@ -180,6 +231,36 @@ function StoryComposer({
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [placeOpen, setPlaceOpen] = useState(false);
+  const [placeTerm, setPlaceTerm] = useState("");
+  const [place, setPlace] = useState<PlaceHit | null>(null);
+  const { results: placeResults, loading: placeLoading } = usePlaceSearch(placeTerm);
+
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [peopleTerm, setPeopleTerm] = useState("");
+  const [tagged, setTagged] = useState<string[]>([]);
+
+  const peopleQ = useQuery({
+    queryKey: ["people-tag"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .neq("id", userId)
+        .order("display_name")
+        .limit(100);
+      if (error) throw error;
+      return data;
+    },
+    enabled: peopleOpen,
+  });
+
+  const peopleFiltered = (peopleQ.data ?? []).filter((p) => {
+    const t = peopleTerm.trim().toLowerCase();
+    if (!t) return true;
+    return p.username.toLowerCase().includes(t) || p.display_name.toLowerCase().includes(t);
+  });
+
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
   const publish = useMutation({
@@ -191,6 +272,10 @@ function StoryComposer({
         author_id: userId,
         body: body.trim(),
         image_url: imagePath,
+        place: place?.name ?? null,
+        place_lat: place?.lat ?? null,
+        place_lng: place?.lng ?? null,
+        tagged_people: tagged,
       });
       if (error) throw error;
     },
@@ -255,6 +340,152 @@ function StoryComposer({
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
 
+          {/* Lugar */}
+          <div className="rounded-2xl border border-ink/10 bg-card/60 p-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => setPlaceOpen((v) => !v)}
+              className="inline-flex items-center gap-2 text-sm text-ink/70 hover:text-ink"
+            >
+              <MapPin className="h-4 w-4" strokeWidth={1.75} />
+              {place ? "Cambiar lugar" : "Etiquetar lugar"}
+            </button>
+
+            {place && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-leather/15 text-leather text-xs px-3 py-1 max-w-full">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{place.name}</span>
+                </span>
+                <button
+                  onClick={() => setPlace(null)}
+                  className="text-ink/40 hover:text-ink"
+                  aria-label="Quitar lugar"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
+            {placeOpen && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-full border border-ink/15 bg-card px-3 py-2">
+                  <Search className="h-3.5 w-3.5 text-ink/40" />
+                  <input
+                    value={placeTerm}
+                    onChange={(e) => setPlaceTerm(e.target.value)}
+                    placeholder="Busca un café, cine, ciudad…"
+                    className="w-full bg-transparent text-sm focus:outline-none"
+                  />
+                  {placeLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-ink/40" />}
+                </div>
+                {place && (
+                  <iframe
+                    title="mapa"
+                    className="w-full h-36 rounded-xl border border-ink/10"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${place.lng - 0.005}%2C${place.lat - 0.004}%2C${place.lng + 0.005}%2C${place.lat + 0.004}&layer=mapnik&marker=${place.lat}%2C${place.lng}`}
+                  />
+                )}
+                <ul className="max-h-40 overflow-y-auto divide-y divide-ink/5">
+                  {placeResults.map((r, i) => (
+                    <li key={`${r.lat}-${r.lng}-${i}`}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPlace(r);
+                          setPlaceTerm("");
+                        }}
+                        className="w-full text-left text-xs py-2 px-1 hover:bg-ink/5 rounded-lg"
+                      >
+                        {r.name}
+                      </button>
+                    </li>
+                  ))}
+                  {!placeLoading && placeTerm.trim().length >= 3 && placeResults.length === 0 && (
+                    <li className="text-xs text-ink/40 py-2">Sin resultados</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Personas */}
+          <div className="rounded-2xl border border-ink/10 bg-card/60 p-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => setPeopleOpen((v) => !v)}
+              className="inline-flex items-center gap-2 text-sm text-ink/70 hover:text-ink"
+            >
+              <AtSign className="h-4 w-4" strokeWidth={1.75} />
+              Etiquetar personas
+            </button>
+
+            {tagged.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {tagged.map((u) => (
+                  <span
+                    key={u}
+                    className="inline-flex items-center gap-1 rounded-full bg-clay/15 text-clay text-xs px-3 py-1"
+                  >
+                    @{u}
+                    <button
+                      onClick={() => setTagged(tagged.filter((x) => x !== u))}
+                      aria-label={`Quitar ${u}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {peopleOpen && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-full border border-ink/15 bg-card px-3 py-2">
+                  <Search className="h-3.5 w-3.5 text-ink/40" />
+                  <input
+                    value={peopleTerm}
+                    onChange={(e) => setPeopleTerm(e.target.value)}
+                    placeholder="Busca por nombre o usuario"
+                    className="w-full bg-transparent text-sm focus:outline-none"
+                  />
+                </div>
+                <ul className="max-h-40 overflow-y-auto divide-y divide-ink/5">
+                  {peopleFiltered.map((p) => {
+                    const on = tagged.includes(p.username);
+                    return (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTagged(on ? tagged.filter((x) => x !== p.username) : [...tagged, p.username])
+                          }
+                          className={`w-full flex items-center gap-2 text-left py-2 px-1 rounded-lg hover:bg-ink/5 ${on ? "opacity-60" : ""}`}
+                        >
+                          <span className="size-7 rounded-full overflow-hidden bg-leather/15 grid place-items-center text-[10px] font-semibold text-leather shrink-0">
+                            {p.avatar_url ? (
+                              <SmartImage path={p.avatar_url} alt="" className="size-full object-cover" />
+                            ) : (
+                              p.display_name.slice(0, 1).toUpperCase()
+                            )}
+                          </span>
+                          <span className="text-xs truncate">
+                            {p.display_name}{" "}
+                            <span className="text-ink/40">@{p.username}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {peopleQ.isLoading && <li className="text-xs text-ink/40 py-2">Cargando…</li>}
+                  {!peopleQ.isLoading && peopleFiltered.length === 0 && (
+                    <li className="text-xs text-ink/40 py-2">Sin personas</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
           {publish.error && (
             <p className="text-xs text-red-600">{(publish.error as Error).message}</p>
           )}
@@ -275,6 +506,7 @@ function StoryComposer({
     </div>
   );
 }
+
 
 /* -------------------- Viewer -------------------- */
 
@@ -387,14 +619,33 @@ function StoryViewer({
               </p>
             </div>
           )}
-          {story.image_url && story.body && (
-            <div className="absolute bottom-8 left-0 right-0 px-6">
+          <div className="absolute bottom-8 left-0 right-0 px-6 z-20 space-y-2 pointer-events-none">
+            {(story.place || (story.tagged_people?.length ?? 0) > 0) && (
+              <div className="flex flex-wrap gap-1.5">
+                {story.place && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ink/60 backdrop-blur text-parchment text-[11px] px-3 py-1 max-w-full">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{story.place}</span>
+                  </span>
+                )}
+                {(story.tagged_people ?? []).map((u) => (
+                  <span
+                    key={u}
+                    className="inline-flex items-center rounded-full bg-ink/60 backdrop-blur text-parchment text-[11px] px-3 py-1"
+                  >
+                    @{u}
+                  </span>
+                ))}
+              </div>
+            )}
+            {story.image_url && story.body && (
               <p className="text-parchment text-base whitespace-pre-wrap bg-ink/50 backdrop-blur rounded-2xl px-4 py-3">
                 {story.body}
               </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
 
         {/* nav zones */}
         <button
