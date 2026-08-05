@@ -53,6 +53,48 @@ export type Database = {
           },
         ]
       }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           author_id: string
@@ -350,6 +392,7 @@ export type Database = {
     Enums: {
       book_status: "leyendo" | "leido" | "pendiente"
       film_status: "viendo" | "visto" | "pendiente"
+      friendship_status: "pendiente" | "aceptada"
       post_kind: "libro" | "cine" | "arte"
     }
     CompositeTypes: {
@@ -480,6 +523,7 @@ export const Constants = {
     Enums: {
       book_status: ["leyendo", "leido", "pendiente"],
       film_status: ["viendo", "visto", "pendiente"],
+      friendship_status: ["pendiente", "aceptada"],
       post_kind: ["libro", "cine", "arte"],
     },
   },
