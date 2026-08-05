@@ -29,7 +29,45 @@ export interface PostRow {
 
 export function PostCard({ post, currentUserId }: { post: PostRow; currentUserId: string }) {
   const [showComments, setShowComments] = useState(false);
+  const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
+  const isMine = post.author_id === currentUserId;
+
+  const updatePost = useMutation({
+    mutationFn: async (values: { title: string; body: string; place: string }) => {
+      const { error } = await supabase
+        .from("posts")
+        .update({
+          title: values.title || null,
+          body: values.body,
+          place: values.place || null,
+        })
+        .eq("id", post.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Publicación actualizada");
+      setEditing(false);
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["profile-posts"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo editar"),
+  });
+
+  const deletePost = useMutation({
+    mutationFn: async () => {
+      await supabase.from("comments").delete().eq("post_id", post.id);
+      await supabase.from("reactions").delete().eq("post_id", post.id);
+      const { error } = await supabase.from("posts").delete().eq("id", post.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Publicación eliminada");
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["profile-posts"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo eliminar"),
+  });
 
   const reactionsQ = useQuery({
     queryKey: ["reactions", post.id],
