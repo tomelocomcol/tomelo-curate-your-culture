@@ -43,7 +43,7 @@ export function Stories({
       const { data, error } = await supabase
         .from("stories")
         .select(
-          "id, author_id, body, image_url, created_at, expires_at, author:profiles!stories_author_id_fkey(username, display_name, avatar_url)",
+          "id, author_id, body, image_url, place, tagged_people, created_at, expires_at, author:profiles!stories_author_id_fkey(username, display_name, avatar_url)",
         )
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: true });
