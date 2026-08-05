@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SmartImage } from "./SmartImage";
 import { formatDistanceToNow } from "date-fns";
@@ -28,7 +29,45 @@ export interface PostRow {
 
 export function PostCard({ post, currentUserId }: { post: PostRow; currentUserId: string }) {
   const [showComments, setShowComments] = useState(false);
+  const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
+  const isMine = post.author_id === currentUserId;
+
+  const updatePost = useMutation({
+    mutationFn: async (values: { title: string; body: string; place: string }) => {
+      const { error } = await supabase
+        .from("posts")
+        .update({
+          title: values.title || null,
+          body: values.body,
+          place: values.place || null,
+        })
+        .eq("id", post.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Publicación actualizada");
+      setEditing(false);
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["profile-posts"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo editar"),
+  });
+
+  const deletePost = useMutation({
+    mutationFn: async () => {
+      await supabase.from("comments").delete().eq("post_id", post.id);
+      await supabase.from("reactions").delete().eq("post_id", post.id);
+      const { error } = await supabase.from("posts").delete().eq("id", post.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Publicación eliminada");
+      qc.invalidateQueries({ queryKey: ["feed"] });
+      qc.invalidateQueries({ queryKey: ["profile-posts"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo eliminar"),
+  });
 
   const reactionsQ = useQuery({
     queryKey: ["reactions", post.id],
@@ -123,6 +162,29 @@ export function PostCard({ post, currentUserId }: { post: PostRow; currentUserId
           </p>
         </div>
         <KindBadge kind={post.kind} />
+        {isMine && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setEditing((v) => !v)}
+              aria-label="Editar publicación"
+              title="Editar"
+              className="p-1.5 rounded-full text-ink/45 hover:text-ink hover:bg-ink/5"
+            >
+              <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </button>
+            <button
+              onClick={() => {
+                if (confirm("¿Eliminar esta publicación?")) deletePost.mutate();
+              }}
+              disabled={deletePost.isPending}
+              aria-label="Eliminar publicación"
+              title="Eliminar"
+              className="p-1.5 rounded-full text-ink/45 hover:text-clay hover:bg-clay/10 disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </button>
+          </div>
+        )}
       </div>
 
       {post.image_url && (
@@ -133,19 +195,73 @@ export function PostCard({ post, currentUserId }: { post: PostRow; currentUserId
         />
       )}
 
-      {(post.title || post.body) && (
-        <div className="mt-4 space-y-2">
-          {post.title && (
-            <h3 className="font-serif text-lg leading-tight text-balance">
-              {post.title}
-            </h3>
-          )}
-          {post.body && (
-            <p className="text-sm text-ink/80 leading-relaxed whitespace-pre-wrap">
-              {post.body}
-            </p>
-          )}
-        </div>
+      {editing ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            updatePost.mutate({
+              title: String(f.get("title") ?? "").trim(),
+              body: String(f.get("body") ?? "").trim(),
+              place: String(f.get("place") ?? "").trim(),
+            });
+          }}
+          className="mt-4 space-y-2"
+        >
+          <input
+            name="title"
+            defaultValue={post.title ?? ""}
+            maxLength={120}
+            placeholder="Título"
+            className="w-full rounded-lg border border-ink/15 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-leather/40"
+          />
+          <textarea
+            name="body"
+            defaultValue={post.body}
+            maxLength={2000}
+            rows={4}
+            placeholder="Nota"
+            className="w-full rounded-lg border border-ink/15 bg-card px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-leather/40"
+          />
+          <input
+            name="place"
+            defaultValue={post.place ?? ""}
+            maxLength={80}
+            placeholder="Café o lugar"
+            className="w-full rounded-lg border border-ink/15 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-leather/40"
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={updatePost.isPending}
+              className="rounded-full bg-ink text-parchment px-4 py-2 text-xs font-semibold disabled:opacity-50"
+            >
+              {updatePost.isPending ? "Guardando…" : "Guardar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="rounded-full border border-ink/15 px-4 py-2 text-xs font-semibold hover:bg-ink/5"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : (
+        (post.title || post.body) && (
+          <div className="mt-4 space-y-2">
+            {post.title && (
+              <h3 className="font-serif text-lg leading-tight text-balance">
+                {post.title}
+              </h3>
+            )}
+            {post.body && (
+              <p className="text-sm text-ink/80 leading-relaxed whitespace-pre-wrap">
+                {post.body}
+              </p>
+            )}
+          </div>
+        )
       )}
 
       {post.tagged_people.length > 0 && (
