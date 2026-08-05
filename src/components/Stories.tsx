@@ -619,14 +619,33 @@ function StoryViewer({
               </p>
             </div>
           )}
-          {story.image_url && story.body && (
-            <div className="absolute bottom-8 left-0 right-0 px-6">
+          <div className="absolute bottom-8 left-0 right-0 px-6 z-20 space-y-2 pointer-events-none">
+            {(story.place || (story.tagged_people?.length ?? 0) > 0) && (
+              <div className="flex flex-wrap gap-1.5">
+                {story.place && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ink/60 backdrop-blur text-parchment text-[11px] px-3 py-1 max-w-full">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{story.place}</span>
+                  </span>
+                )}
+                {(story.tagged_people ?? []).map((u) => (
+                  <span
+                    key={u}
+                    className="inline-flex items-center rounded-full bg-ink/60 backdrop-blur text-parchment text-[11px] px-3 py-1"
+                  >
+                    @{u}
+                  </span>
+                ))}
+              </div>
+            )}
+            {story.image_url && story.body && (
               <p className="text-parchment text-base whitespace-pre-wrap bg-ink/50 backdrop-blur rounded-2xl px-4 py-3">
                 {story.body}
               </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
 
         {/* nav zones */}
         <button
