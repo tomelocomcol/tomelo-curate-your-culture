@@ -104,6 +104,8 @@ export type Database = {
           image_url: string | null
           kind: Database["public"]["Enums"]["post_kind"]
           place: string | null
+          place_lat: number | null
+          place_lng: number | null
           tagged_people: string[]
           title: string | null
           updated_at: string
@@ -116,6 +118,8 @@ export type Database = {
           image_url?: string | null
           kind?: Database["public"]["Enums"]["post_kind"]
           place?: string | null
+          place_lat?: number | null
+          place_lng?: number | null
           tagged_people?: string[]
           title?: string | null
           updated_at?: string
@@ -128,6 +132,8 @@ export type Database = {
           image_url?: string | null
           kind?: Database["public"]["Enums"]["post_kind"]
           place?: string | null
+          place_lat?: number | null
+          place_lng?: number | null
           tagged_people?: string[]
           title?: string | null
           updated_at?: string
